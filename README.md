@@ -78,15 +78,18 @@ Below is a visual comparison of typical cracks detected across four datasets usi
 
 If you find our work or any of our materials useful, please cite our paper:
 ```
-@misc{,
-      title={Enhanced Crack Segmentation via Dual-Branch CNN-Transformer Architecture with Linear Perception and Multi-Scale Refinement}, 
-      author={JiangTao Feng and Jing Li and FengLei Su and ChengJun Duan and XuDong Shui},
-      year={2025},
-      eprint={},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={}, 
+@misc{doi:10.21203/rs.3.rs-7703561/v1,
+	doi = {10.21203/rs.3.rs-7703561/v1},
+	publisher = {Springer Science and Business Media LLC},
+	title = {Enhanced Crack Segmentation via Dual-Branch CNN-Transformer Architecture with Linear Perception and Multi-Scale Refinement},
+	author = {Feng, Jiangtao and Li, Jing and Su, Fenglei and Duan, Chengjun and Shui, Xudong},
+	note = {[Online; accessed 2025-09-26]},
+	date = {2025-09-25},
+	year = {2025},
+	month = {9},
+	day = {25},
 }
+
 ```
 
 ## 5. Contact
