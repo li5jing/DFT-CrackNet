@@ -5,7 +5,7 @@ This repository contains the code for the paper **“Enhanced Crack Segmentation
 ## 1. Method Overview
 
 <p align="center">
-    <img src="./figures/Overview.png" alt="Overview" />
+    <img src="./Figures/model-design.png" alt="Overview" />
 </p>
 
 Crack segmentation is crucial for infrastructure maintenance and structural health monitoring. Traditional image processing techniques are limited by their inability to capture complex crack geometries and contextual continuity. Although deep learning, particularly Convolutional Neural Networks (CNNs), has advanced crack detection, these methods struggle with long-range dependencies and detailed shape capture.
