@@ -68,21 +68,21 @@ class DoubleConv(nn.Module):
 
         return output
 
-#解码器部分的多尺度边缘精华模块 的实现代码
+# Decoder part of the multi-scale edge enhancement module
 class ParallelCDCConv(nn.Module):
-    """
-    并行CDC卷积模块，包含两个分支：
-    1. 主分支：标准DoubleConv（卷积-批归一化-ReLU）
-    2. 边缘分支：CDC增强后的卷积
-    两个分支的特征通过加权融合（可学习权重 alpha）进行合成。
+ """
+    Parallel CDC convolution module, containing two branches:
+    1. Main branch: Standard DoubleConv (Convolution-Batch Normalization-ReLU)
+    2. Edge branch: CDC enhanced convolution
+    The features of both branches are fused using a weighted sum (learnable weight alpha).
     """
 
     def __init__(self, in_dim, out_dim, theta=0.7):
         super(ParallelCDCConv, self).__init__()
 
-        hidden_dim = (in_dim + out_dim) // 2  # 隐藏层通道数
+        hidden_dim = (in_dim + out_dim) // 2  
 
-        # 主分支：DoubleConv (标准卷积)
+  # Main branch: DoubleConv (Standard Convolution)
         self.double_conv = nn.Sequential(
             nn.Conv2d(in_dim, hidden_dim, 3, padding=1),
             nn.BatchNorm2d(hidden_dim),
@@ -92,59 +92,57 @@ class ParallelCDCConv(nn.Module):
             nn.ReLU()
         )
 
-        # 边缘分支：CDC增强后投影到 out_dim
+      # Edge branch: CDC enhanced convolution, projected to out_di
         self.edge_branch = nn.Sequential(
             nn.Conv2d(in_dim, hidden_dim, 3, padding=1),
             nn.BatchNorm2d(hidden_dim),
             nn.ReLU(),
-            cdc_vg(hidden_dim, theta=theta),  # CDC模块（需要定义）
-            nn.Conv2d(hidden_dim, out_dim, 3, padding=1),  # 输出投影层
+            cdc_vg(hidden_dim, theta=theta), 
+            nn.Conv2d(hidden_dim, out_dim, 3, padding=1), 
             nn.BatchNorm2d(out_dim),
             nn.ReLU()
         )
 
-        # 可学习的融合权重
-        self.alpha = nn.Parameter(torch.tensor(0.5))  # alpha 权重用于控制两分支的融合程度
+        # Learnable fusion weight
+        self.alpha = nn.Parameter(torch.tensor(0.5))  
 
     def forward(self, x):
         """
-        前向传播：通过两个分支提取特征，并加权融合
+        Forward pass: Extract features through two branches and fuse them with a weighted sum
         """
-        # 主分支特征
+       
         feat_main = self.double_conv(x)  # 输出形状: (B, out_dim, H, W)
 
-        # 边缘分支特征
         feat_edge = self.edge_branch(x)  # 输出形状: (B, out_dim, H, W)
 
-        # 加权融合两个分支的特征
         out = self.alpha * feat_edge + (1 - self.alpha) * feat_main
 
         return out
 
 
 class conv_upsample(nn.Module):
-    """
-    上采样模块：
-    1. 使用ParallelCDCConv提取特征
-    2. 使用双线性插值进行上采样
+   """
+    Upsampling module:
+    1. Extract features using ParallelCDCConv
+    2. Perform upsampling using bilinear interpolation
     """
     def __init__(self, scale, in_dim, out_dim=32, use_cdc=True, theta=0.7):
         super(conv_upsample, self).__init__()
 
-        # 使用 ParallelCDCConv 替代原有的 DoubleConv
+         # Use ParallelCDCConv instead of the original DoubleConv
         self.conv = ParallelCDCConv(in_dim, out_dim, theta=theta)
 
-        # 上采样操作，使用双线性插值
+       # Upsampling operation using bilinear interpolation
         self.upscale = nn.Upsample(scale_factor=scale, mode='bilinear', align_corners=True)
 
     def forward(self, x):
+      """
+        Forward pass: Extract features and perform upsampling
         """
-        前向传播：提取特征并进行上采样
-        """
-        # 使用 ParallelCDCConv 提取特征
+        
         feat = self.conv(x)
 
-        # 对提取的特征进行上采样
+       
         output = self.upscale(feat)
 
         return output
@@ -158,17 +156,16 @@ class ResNetEncoder(nn.Module):
         self.encoder1 = nn.Sequential(encoder.conv1, encoder.bn1, encoder.relu)  # 64x128x128
         # self.mp = encoder.maxpool
         self.mp = Hpool(
-            in_channels=64,  # ResNet 第一层输出通道数
-            pool_size=(14, 14),  # 输入特征图尺寸为 112x112 时适用
-            norm_layer=nn.BatchNorm2d,  # 与 ResNet 归一化层一致
-            up_kwargs={'mode': 'bilinear', 'align_corners': True},  # 上采样参数
-            reduction=16  # SE 注意力压缩比
-        )
+            in_channels=64,  
+            pool_size=(14, 14), 
+            norm_layer=nn.BatchNorm2d, 
+            up_kwargs={'mode': 'bilinear', 'align_corners': True},  
+            reduction=16  
 
         self.encoder2 = nn.Sequential(
-            encoder.layer1,  # 原始残差层
+            encoder.layer1,  
             # MFAU(in_channels=256)
-            MFISA(in_channels=256)  # 添加注意力
+            MFISA(in_channels=256)  
         )
         self.encoder3 = nn.Sequential(
             encoder.layer2,
@@ -259,7 +256,7 @@ class DFT_CrackNet(pl.LightningModule):
         x, y = batch
         loss, pred, y = self._common_step(batch, batch_idx)
 
-        # 计算各种评价指标
+       
         accuracy = self.accuracy(pred, y)
         f1_score = self.f1_score(pred, y)
         re = self.recall(pred, y)
@@ -268,7 +265,7 @@ class DFT_CrackNet(pl.LightningModule):
         y_int = torch.tensor(y, dtype=torch.int32)
         dice = self.dice(pred, y_int)
 
-        # 日志记录
+      
         self.log_dict({
             'train_loss': loss,
             'train_accuracy': accuracy,
@@ -279,31 +276,29 @@ class DFT_CrackNet(pl.LightningModule):
             'train_dice': dice
         }, on_step=False, on_epoch=True, prog_bar=True)
 
-        # -----------------------------
-        # 可视化：每 100 个 batch 可视化输入图像、标签和预测
-        # -----------------------------
+      
         if batch_idx % 100 == 0:
-            x_vis = x[:8]  # 输入图像
-            y_vis = y[:8]  # 标签图像，通常是 [B, 1, H, W]
-            pred_vis = pred[:8]  # 模型预测
+            x_vis = x[:8] 
+            y_vis = y[:8]  
+            pred_vis = pred[:8]  
 
-            # 确保维度是 [B, 1, H, W]
+          
             if y_vis.ndim == 3:
                 y_vis = y_vis.unsqueeze(1)
             if pred_vis.ndim == 3:
                 pred_vis = pred_vis.unsqueeze(1)
-            # 将预测结果转换为 0/1 掩码（如用 sigmoid 输出）
+            
             binary_pred = (pred_vis > 0.5).float()
 
-            # 将标签和预测图扩展到 3 通道（为了与输入图像并排显示）
+          
             y_vis_rgb = y_vis.repeat(1, 3, 1, 1)
             pred_vis_rgb = binary_pred.repeat(1, 3, 1, 1)
 
-            # 拼接：第一行输入图像，第二行 Ground Truth，第三行预测结果
+           
             comparison = torch.cat([x_vis, y_vis_rgb, pred_vis_rgb], dim=0)
-            # 拼接成网格
+           
             grid = torchvision.utils.make_grid(comparison, nrow=8)
-            # 写入 TensorBoard
+           
             self.logger.experiment.add_image("input_GT_pred", grid, self.global_step)
 
         return loss
