@@ -1,4 +1,3 @@
-
 import math
 import torch
 import torch.nn as nn
@@ -6,9 +5,9 @@ from torch.nn import functional as F
 import numpy as np
 
 
-def swish(x):  # 是 ReLU 函数的一个变种
-	# return x * torch.sigmoid(x)   #计算复杂
-	return x * F.relu6(x + 3) / 6  # 计算简单
+def swish(x):  # A variant of the ReLU function
+	# return x * torch.sigmoid(x)   # Computationally complex
+	return x * F.relu6(x + 3) / 6  # Simpler computation
 #
 
 class BasicConv2d(nn.Module):
@@ -16,7 +15,7 @@ class BasicConv2d(nn.Module):
 	def __init__(self, in_channels, out_channels, kernel_size=3,
 				 stride=1, padding=1, dilation=1, groups=1, bias=False, bn=True,
 				 activation=swish, conv=nn.Conv2d,
-				 ):  # 'frelu',nn.ReLU(inplace=False),sinlu
+				 ):  # 'frelu', nn.ReLU(inplace=False), sinlu
 		super(BasicConv2d, self).__init__()
 		if not isinstance(kernel_size, tuple):
 			if dilation > 1:
@@ -46,12 +45,12 @@ class BasicConv2d(nn.Module):
 		return x
 
 
-class BottleNeck(torch.nn.Module):#轻量化残差结构，用于特征提取。
+class BottleNeck(torch.nn.Module):  # Lightweight residual structure for feature extraction.
 
 	MyConv = BasicConv2d
 	def __init__(self, in_c, out_c, stride=1, out='dis', **args):
 		super(BottleNeck, self).__init__()
-		if in_c!=out_c:
+		if in_c != out_c:
 			self.shortcut = nn.Sequential(
 				nn.Conv2d(in_c, out_c, kernel_size=1, stride=1, bias=False),
 				nn.BatchNorm2d(out_c)
@@ -62,12 +61,12 @@ class BottleNeck(torch.nn.Module):#轻量化残差结构，用于特征提取。
 		self.conv2 = self.MyConv(out_c, out_c, 3, padding=1, activation=None)
 		# self.o = nn.Dropout2d(p=0.15)#DisOut(p=.15)#
 	def forward(self, x):
-		out = self.conv2(self.conv1(x))#两次卷积
+		out = self.conv2(self.conv1(x))  # Two convolutions
 		# out = self.o(out)
-		return swish(out + self.shortcut(x))#残差连接 + Swish激活
+		return swish(out + self.shortcut(x))  # Residual connection + Swish activation
 
 
-class MFISA(nn.Module):  # Match filter inspired space attention，考虑对方差进行平滑性监督
+class MFISA(nn.Module):  # Match filter inspired space attention, considering variance smoothing supervision
 	def __init__(self, in_channels=32):
 		super(MFISA, self).__init__()
 		mid_channels = in_channels // 2
@@ -75,35 +74,35 @@ class MFISA(nn.Module):  # Match filter inspired space attention，考虑对方�
 			nn.Conv2d(1, mid_channels, 3, 1, 1),
 			nn.Conv2d(mid_channels, 1, 3, 1, 1),
 			nn.BatchNorm2d(1)
-		)  # filt_max：这个部分通过两层卷积和批归一化操作来计算特征图的最大值，捕捉特征的动态范围
+		)  # filt_max: This part calculates the maximum value of the feature map using two convolution layers and batch normalization to capture the dynamic range of the features
 		self.filt_std = nn.Sequential(
 			nn.Conv2d(1, mid_channels, 3, 1, 1),
 			nn.Conv2d(mid_channels, 1, 3, 1, 1),
 			nn.BatchNorm2d(1)
-		)  # filt_std：计算标准差的滤波器，用于捕捉特征图的平滑性或分散度。
+		)  # filt_std: A filter to calculate the standard deviation, used to capture the smoothness or dispersion of the feature map.
 		self.filt_out = nn.Sequential(
 			nn.Conv2d(1, mid_channels, 3, 1, 1),
 			nn.Conv2d(mid_channels, 1, 3, 1, 1),
 			nn.BatchNorm2d(1)
-		)  # filt_out：该滤波器将 vp2p（峰值到峰值的差）和 vstd（标准差）结合，输出合并的特征。
+		)  # filt_out: This filter combines vp2p (peak-to-peak difference) and vstd (standard deviation) to output the combined features.
 		self.filt_att = nn.Sequential(
 			nn.Conv2d(1, mid_channels, 3, 1, 1),
 			nn.Conv2d(mid_channels, 1, 3, 1, 1),
 			nn.Sigmoid()
-		)  # filt_att：注意力机制部分，使用两层卷积和一个 Sigmoid 激活函数，生成一个注意力图，用来决定应该关注输入特征图的哪些区域。
+		)  # filt_att: The attention mechanism part, using two convolution layers and a Sigmoid activation function, generates an attention map to decide which regions of the input feature map to focus on.
 
 	def forward(self, res):
-		vmin, _ = torch.min(res, dim=1, keepdim=True)  # 计算通道维度上的最小值
-		vmax, _ = torch.max(res, dim=1, keepdim=True)  # 计算通道维度上的最大值
-		vp2p = vmax - vmin  # 计算峰值到峰值的差值，衡量特征的动态范围
-		vstd = torch.std(res, dim=1, keepdim=True)  # 计算通道维度上的标准差
+		vmin, _ = torch.min(res, dim=1, keepdim=True)  # Calculate the minimum value along the channel dimension
+		vmax, _ = torch.max(res, dim=1, keepdim=True)  # Calculate the maximum value along the channel dimension
+		vp2p = vmax - vmin  # Calculate the peak-to-peak difference, measuring the dynamic range of the feature map
+		vstd = torch.std(res, dim=1, keepdim=True)  # Calculate the standard deviation along the channel dimension
 
 		att = self.filt_max(vp2p) + self.filt_std(vstd) + self.filt_out(vp2p + vstd)
-		# vp2p，突出动态范围大的区域，标准差滤波器处理vstd，捕捉纹理变化，综合滤波器，处理vp2p+vstd，融合两者的信息
-		return self.filt_att(F.leaky_relu(att)) * res  # 成注意力权重，调整输入特征
+		# vp2p highlights regions with large dynamic range, the std filter processes vstd to capture texture changes, and the combined filter processes vp2p+vstd to merge both pieces of information
+		return self.filt_att(F.leaky_relu(att)) * res  # Attention weights adjust the input features
 
 
-class MFAU(nn.Module):  # 匹配滤波器激励的空间注意力机制，用于增强特征的表达能力
+class MFAU(nn.Module):  # Match Filter Activated Spatial Attention Mechanism for enhancing feature representation
 	__name__ = 'mfau'
 
 	def __init__(self, in_channels=256, layers=(256, 512, 512, 1024)):
@@ -120,21 +119,18 @@ class MFAU(nn.Module):  # 匹配滤波器激励的空间注意力机制，用于
 			self.attenten.append(MFISA(layers[i + 1]))
 
 	def forward(self, x0):
-		x = self.first(x0)  # 第一层卷积块
+		x = self.first(x0)  # First convolution block
 		down_activations = []
 
 		for i, down in enumerate(self.encoders):
-			down_activations.append(x)  # 记录当前层的输入（下采样前的特征）
+			down_activations.append(x)  # Record the input of the current layer (before down-sampling)
 
-			# 对x进行下采样和编码
+			# Down-sample and encode x
+			x = down(self.pool(x))  # Down-sample and apply encoder operation
+			x = self.attenten[i](x)  # Attention mechanism applied
 
-			x = down(self.pool(x))  # 下采样和编码器操作
-			x = self.attenten[i](x)  # 注意力机制处理
-
-
-
-		down_activations.append(x)  # 记录最后一层的输出
-		return down_activations  # 返回编码器阶段的特征（包括残差连接后的特征）
+		down_activations.append(x)  # Record the output of the final layer
+		return down_activations  # Return features from the encoder stage (including features after residual connections)
 
 
 def mfau(**args):
@@ -142,19 +138,18 @@ def mfau(**args):
 
 import torch
 
-# 假设已经定义了MFAU类和相关模块
-# 实例化MFAU网络
-model = MFAU(in_channels=3)  # 输入通道数是3
+# Assuming the MFAU class and related modules are already defined
+# Instantiate the MFAU network
+model = MFAU(in_channels=3)  # The input channels are 3
 
-# 创建一个随机的输入张量，形状为 (16, 3, 256, 256)
-x = torch.randn(16, 256, 64, 64)  # 16个样本，每个样本是3个通道，大小为256x256的图像
+# Create a random input tensor of shape (16, 3, 256, 256)
+x = torch.randn(16, 256, 64, 64)  # 16 samples, each is a 3-channel image of size 256x256
 
-# 将输入传入MFAU网络，获取输出
+# Pass the input through the MFAU network and get the output
 output = model(x)
 
-# 打印输出的形状，检查输出特征图的尺寸
+# Print the output shape to check the feature map sizes
 for i, out in enumerate(output):
     print(f"Output at layer {i} has shape: {out.shape}")
-
 
 
