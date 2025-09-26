@@ -63,8 +63,8 @@ python test.py
 ```
 You can also follow the steps below to validate the results of our experiments on the **CrackVersion12K** and **CrackVersion-Fine** datasets:
 
-- **Download Checkpoint**: Get the pre-trained model on the **CrackVersion12K** dataset: [checkpoint_crackversion12k](https://drive.google.com/file/d/1aK7DgtZlyij88zbdBVf8XahfHdKbMQwK/view?usp=drive_link)
-- **Download Checkpoint**: Get the pre-trained model on the **CrackVersion-Fine** dataset: [checkpoint_crackversion12k-fine](https://drive.google.com/file/d/1aK7DgtZlyij88zbdBVf8XahfHdKbMQwK/view?usp=drive_link)
+- **Download Checkpoint**: Get the pre-trained model on the **CrackVersion12K** dataset: [checkpoint_crackversion12k](https://drive.google.com/file/d/1aK7DgKbMQwK/view?usp=drive_link)
+- **Download Checkpoint**: Get the pre-trained model on the **CrackVersion-Fine** dataset: [checkpoint_crackversion12k-fine](https://drive.google.com/file/d/1aK7DgtZlK/view?usp=drive_link)
 
 #### File Placement
 
