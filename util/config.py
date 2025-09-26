@@ -4,7 +4,7 @@ import os
 ### train on total dataset
 NUM_EPOCHS = 100
 DATASET_SIZE = {'train' : 9600, 'val' : 1200, 'test' : 1200}
-dataset = '/amax/sxd/jing/DFT-CrackNet/Crack600/split_dataset_final/' #表示获取数据集的路径，通过相对路径获得数据集的根目录
+dataset = '/amax/sxd/jing/DFT-CrackNet/Crack600/split_dataset_final/' # Path to get the dataset, relative path to the dataset's root directory
 
 ### train on sample dataset
 # NUM_EPOCHS = 1
@@ -18,9 +18,9 @@ BATCH_SIZE = 16
 NUM_WORKERS = 2
 IMAGE_HEIGHT = 256
 IMAGE_WIDTH = 256
-PIN_MEMORY = True #数据加载在内存中，提高数据加载的速度，在使用GOU时，将其设置为true
-LOAD_MODEL = False  #表示不加载已保存的模型，从头开始训练；若设置为true，模型将从之前的训练状态恢复，以便继续进行训练。
-# Dataset dir
+PIN_MEMORY = True # Enable loading data into memory to speed up data loading when using GPU.
+LOAD_MODEL = False  # Indicates whether to load a previously saved model or start training from scratch.
+# Dataset directories
 TRAIN_IMG_DIR = dataset+"train/IMG"
 TRAIN_MASK_DIR = dataset+"train/GT"
 VAL_IMG_DIR = dataset+"val/IMG"
