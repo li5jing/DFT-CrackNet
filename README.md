@@ -75,7 +75,7 @@ Move the downloaded checkpoint file to the designated path: `./checkpoints/weigh
 Below is a visual comparison of typical cracks detected across four datasets using 10 different methods.
 
 <p align="center">
-    <img src=".Figures/model-design.png" alt="Visualization" />
+    <img src=".Figures/results.png" alt="Visualization" />
 </p>
 
 ## 4. Citation
